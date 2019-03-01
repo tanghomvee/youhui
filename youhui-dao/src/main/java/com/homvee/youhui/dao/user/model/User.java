@@ -1,53 +1,60 @@
 package com.homvee.youhui.dao.user.model;
 
 import com.homvee.youhui.dao.BaseEntity;
+import org.hibernate.annotations.GenericGenerator;
 
-import javax.persistence.Entity;
-import javax.persistence.Table;
+import javax.persistence.*;
+import java.io.Serializable;
+import java.util.Date;
 
 /**
- * Copyright (c) 2018$. ddyunf.com all rights reserved
- *
- * @author Homvee.Tang(tanghongwei @ ddcloudf.com)
- * @version V1.0
- * @Description TODO(用一句话描述该文件做什么)
- * @date 2018-08-17 10:54
+ * 
  */
 @Entity
-@Table(name = "t_user")
-public class User  extends BaseEntity {
+@Table(name="user")
+public class User implements Serializable {
 
-    private String userName;
-    private String pwd;
-    private String authKey;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name="id")
+    private Long id;
 
-    /**
-     * 手机号
-     */
+    @Column(name="mobile")
     private String mobile;
 
-    public String getUserName() {
-        return userName;
+    @Column(name="pwd")
+    private String pwd;
+
+    @Column(name="rewardAmt")
+    private Double rewardAmt;
+
+    @Column(name="recommender")
+    private Long recommender;
+
+    @Column(name="activated")
+    private Integer activated;
+
+    @Column(name="openId")
+    private String openId;
+
+    @Column(name="creator")
+    private String creator;
+
+    @Column(name="createTime")
+    private Date createTime;
+
+    @Column(name="changer")
+    private String changer;
+
+    @Column(name="changeTime")
+    private Date changeTime;
+
+    public Long getId() {
+        return id;
     }
 
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public String getPwd() {
-        return pwd;
-    }
-
-    public void setPwd(String pwd) {
-        this.pwd = pwd;
-    }
-
-    public String getAuthKey() {
-        return authKey;
-    }
-
-    public void setAuthKey(String authKey) {
-        this.authKey = authKey;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getMobile() {
@@ -58,13 +65,92 @@ public class User  extends BaseEntity {
         this.mobile = mobile;
     }
 
+    public String getPwd() {
+        return pwd;
+    }
+
+    public void setPwd(String pwd) {
+        this.pwd = pwd;
+    }
+
+    public Double getRewardAmt() {
+        return rewardAmt;
+    }
+
+    public void setRewardAmt(Double rewardAmt) {
+        this.rewardAmt = rewardAmt;
+    }
+
+    public Long getRecommender() {
+        return recommender;
+    }
+
+    public void setRecommender(Long recommender) {
+        this.recommender = recommender;
+    }
+
+    public Integer getActivated() {
+        return activated;
+    }
+
+    public void setActivated(Integer activated) {
+        this.activated = activated;
+    }
+
+    public String getOpenId() {
+        return openId;
+    }
+
+    public void setOpenId(String openId) {
+        this.openId = openId;
+    }
+
+    public String getCreator() {
+        return creator;
+    }
+
+    public void setCreator(String creator) {
+        this.creator = creator;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
+    }
+
+    public String getChanger() {
+        return changer;
+    }
+
+    public void setChanger(String changer) {
+        this.changer = changer;
+    }
+
+    public Date getChangeTime() {
+        return changeTime;
+    }
+
+    public void setChangeTime(Date changeTime) {
+        this.changeTime = changeTime;
+    }
+
     @Override
     public String toString() {
         return "User{" +
-                "userName='" + userName + '\'' +
-                ", pwd='" + pwd + '\'' +
-                ", authKey='" + authKey + '\'' +
+                "id=" + id +
                 ", mobile='" + mobile + '\'' +
+                ", pwd='" + pwd + '\'' +
+                ", rewardAmt=" + rewardAmt +
+                ", recommender=" + recommender +
+                ", activated=" + activated +
+                ", openId='" + openId + '\'' +
+                ", creator='" + creator + '\'' +
+                ", createTime=" + createTime +
+                ", changer='" + changer + '\'' +
+                ", changeTime=" + changeTime +
                 '}';
     }
 }

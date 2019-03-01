@@ -1,6 +1,7 @@
-package com.slst.common.dao;
+package com.homvee.youhui.dao.cfg;
 
-import com.slst.common.dao.model.SysCfg;
+
+import com.homvee.youhui.dao.cfg.model.SysCfg;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**

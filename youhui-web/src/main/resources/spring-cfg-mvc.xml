@@ -58,6 +58,12 @@
 			<mvc:exclude-mapping path="/favicon.ico" />
 			<mvc:exclude-mapping path="/readme.md" />
 
+			<mvc:exclude-mapping path="/youhui/wechat/sendPhoneVerify"/>
+			<mvc:exclude-mapping path="/youhui/wechat/openid"/>
+
+			<mvc:exclude-mapping path="/youhui/discount/list"/>
+			<mvc:exclude-mapping path="/youhui/discount/detail"/>
+
 			<bean class="com.homvee.youhui.web.interceptors.UsrLoginInterceptor"/>
 		</mvc:interceptor>
 
@@ -70,5 +76,5 @@
 
 	<import resource="spring-cfg-converters.xml"/>
 	<import resource="spring-cfg-view.xml"/>
-	<import resource="spring-cfg-websocket.xml"/>
+<!--	<import resource="spring-cfg-websocket.xml"/>-->
 </beans>

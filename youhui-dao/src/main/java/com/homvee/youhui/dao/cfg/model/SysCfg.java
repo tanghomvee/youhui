@@ -1,10 +1,12 @@
-package com.slst.common.dao.model;
+package com.homvee.youhui.dao.cfg.model;
+
+import com.homvee.youhui.dao.BaseEntity;
 
 import javax.persistence.Entity;
 import javax.persistence.Table;
 
 @Entity
-@Table(name = "t_sys_cfg")
+@Table(name = "syscfg")
 public class SysCfg extends BaseEntity {
 	/**程序标志*/
 	private String code;
