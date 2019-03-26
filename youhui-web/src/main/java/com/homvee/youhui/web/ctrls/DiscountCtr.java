@@ -36,8 +36,8 @@ public class DiscountCtr {
      */
     @RequestMapping(path = {"/detail"} )
     @ResponseBody
-    public Msg detail(Long id,String openId){
-        Msg msg = discountService.detail(id,openId);
+    public Msg detail(Long id,String openid){
+        Msg msg = discountService.detail(id,openid);
         return msg;
     }
 }

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:context="http://www.springframework.org/schema/context"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
     http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
-    http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd"
-	default-autowire="byName">
+    http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd"
+	   default-autowire="byName">
 
 	<context:component-scan base-package="com.homvee.youhui.web.ctrls"/>
 
@@ -19,6 +21,10 @@
 			</list>
 		</property>
 	</bean>
+
+	<aop:aspectj-autoproxy proxy-target-class="true"/>
+	<bean id="loggerAop" class="com.homvee.youhui.web.interceptors.LoggerAop"></bean>
+
 
 	<mvc:annotation-driven conversion-service="conversionService">
 		<mvc:message-converters register-defaults="true">
@@ -38,10 +44,7 @@
 
 	<!-- 静态资源缓存 -->
 	<!--<mvc:resources location="/resources/" mapping="/resources/**" cache-period="864000"/>-->
-	<mvc:resources location="/static/css/" mapping="/static/css/**" cache-period="864000"/>
-	<mvc:resources location="/static/img/" mapping="/static/img/**" cache-period="864000"/>
-	<mvc:resources location="/static/fonts/" mapping="/static/fonts/**" cache-period="864000"/>
-	<mvc:resources location="/static/js/" mapping="/static/js/**" cache-period="864000"/>
+	<mvc:resources location="/static/" mapping="/static/**"/>
 	<mvc:resources location="/" mapping="/index.html"/>
 
 	<!--权限配置-->
@@ -53,13 +56,18 @@
 			<mvc:exclude-mapping path="/content/chat/**" />
 			<mvc:exclude-mapping path="/sms/**" />
 			<mvc:exclude-mapping path="/msg/**" />
+			<mvc:exclude-mapping path="/img/**" />
 			<mvc:exclude-mapping path="/index.html" />
+			<mvc:exclude-mapping path="/index1.html" />
 			<mvc:exclude-mapping path="/static/**" />
 			<mvc:exclude-mapping path="/favicon.ico" />
 			<mvc:exclude-mapping path="/readme.md" />
 
+			<mvc:exclude-mapping path="/youhui/wechat/bind"/>
+            <mvc:exclude-mapping path="/youhui/wechat/index"/>
 			<mvc:exclude-mapping path="/youhui/wechat/sendPhoneVerify"/>
 			<mvc:exclude-mapping path="/youhui/wechat/openid"/>
+			<mvc:exclude-mapping path="/youhui/wechat/jsapi"/>
 
 			<mvc:exclude-mapping path="/youhui/discount/list"/>
 			<mvc:exclude-mapping path="/youhui/discount/detail"/>

@@ -27,11 +27,11 @@ public class UsrLoginInterceptor extends HandlerInterceptorAdapter {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 
-        LOGGER.info("来自请求方的IP:remoteAddr={},remoteHost={},remotePort={},forwarded-for={}" ,
+        /*LOGGER.info("来自请求方的IP:remoteAddr={},remoteHost={},remotePort={},forwarded-for={}" ,
                 request.getRemoteAddr() ,
                 request.getRemoteHost(),
                 request.getRemotePort(),
-                request.getHeader("X-FORWARDED-FOR"));
+                request.getHeader("X-FORWARDED-FOR"));*/
 
         response.setContentType(MEDIA_JSON);
         String openid = request.getParameter("openid");

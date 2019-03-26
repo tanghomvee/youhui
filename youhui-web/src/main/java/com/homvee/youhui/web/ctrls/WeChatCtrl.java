@@ -1,6 +1,7 @@
 package com.homvee.youhui.web.ctrls;
 
 
+import com.homvee.youhui.common.sms.SmsUtil;
 import com.homvee.youhui.common.utils.VerifyUtil;
 import com.homvee.youhui.common.vos.Msg;
 import com.homvee.youhui.dao.user.model.User;
@@ -58,12 +59,14 @@ public class WeChatCtrl extends BaseCtrl {
         }
 
         String code = RandomStringUtils.randomNumeric(4);
-        LOGGER.info("手机号为{}的用户的验证码为{}", phoneNo, code);
 
+        boolean flag = SmsUtil.sendMsg(phoneNo, code);
+        if(!flag){
+            return Msg.error("发送短信失败");
+        }
         request.getSession().setAttribute("code", code);
 
-        LOGGER.info("向用户 {} 下发验证 ", phoneNo);
-        //msgRpcService.sendMsgToMq(phoneNo,MsgTplCodeEnum.PHONE_VERIFY2.getValue(),new String[]{code},null);
+        LOGGER.info("向用户 {} 下发验证{} ", phoneNo, code);
         return Msg.success("发送短信成功");
     }
 
@@ -94,6 +97,16 @@ public class WeChatCtrl extends BaseCtrl {
             return Msg.error("验证码输入错误");
         }
 
+        User userOpenId = userService.findByMobileAndOpenId(phoneNo, openid);
+        if(userOpenId!=null){
+            return Msg.success("绑定成功");
+        }
+
+        User customer = userService.findByOpenid(openid);
+        if(customer!=null){
+            return Msg.error("该手机已经绑定了其他手机号,请先解绑");
+        }
+
         User user = userService.findByMobile(phoneNo);
 
         //注册用户
@@ -105,9 +118,11 @@ public class WeChatCtrl extends BaseCtrl {
            userNew.setRewardAmt(0d);
            if(StringUtils.isBlank(invitCode)){
                userNew.setRecommender(null);
+           }else {
+               User invitUser = userService.findByMobile(invitCode);
+               userNew.setRecommender(invitUser.getId());
            }
-           User invitUser = userService.findByMobile(invitCode);
-           userNew.setRecommender(invitUser.getId());
+
            userNew.setOpenId(openid);
            userNew.setCreator("注册");
            userNew.setChangeTime(new Date());
@@ -115,17 +130,13 @@ public class WeChatCtrl extends BaseCtrl {
            return Msg.success("绑定手机号成功");
         }
 
-        //同一手机二次绑定
-        if(openid.equals(user.getOpenId())){
-           return  Msg.error("改手机已经绑定");
-        }else{
-            //解绑之后再次绑定
-            //换手机绑定
-            user.setOpenId(openid);
-            user.setChangeTime(new Date());
-            userService.saveOrUpdate(user);
-            return Msg.success("绑定手机号成功");
-        }
+        //解绑之后再次绑定
+        //换手机绑定
+        user.setOpenId(openid);
+        user.setChangeTime(new Date());
+        userService.saveOrUpdate(user);
+        return Msg.success("绑定手机号成功");
+
     }
 
 
@@ -142,6 +153,24 @@ public class WeChatCtrl extends BaseCtrl {
             return Msg.error("参数错误");
         }
         return weChatService.getUsrOpenId(code , state);
+    }
+
+
+    @RequestMapping(path = {"/jsapi"} , method = {RequestMethod.POST ,RequestMethod.GET})
+    @ResponseBody
+    public Msg jsapi(String url, HttpServletRequest req) throws Exception {
+
+        //String reurl = req.getScheme()+"://"+req.getServerName()+":"+req.getServerPort()+req.getContextPath()+req.getServletPath();
+        if(StringUtils.isBlank(url)){
+            return Msg.error("传入url");
+        }
+        System.out.println(url+"###" + url);
+
+        // url = URLDecoder.decode(url,"utf-8");
+
+        System.out.println("页面url：" + url);
+
+        return weChatService.jsapi(url);
     }
 
 }

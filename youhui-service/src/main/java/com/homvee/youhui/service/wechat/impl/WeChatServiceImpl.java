@@ -7,6 +7,8 @@ import com.google.common.cache.LoadingCache;
 import com.homvee.youhui.common.utils.HttpUtils;
 import com.homvee.youhui.common.utils.WXBizMsgCrypt;
 import com.homvee.youhui.common.vos.Msg;
+import com.homvee.youhui.common.vos.TicketBean;
+import com.homvee.youhui.common.vos.TokenBean;
 import com.homvee.youhui.service.wechat.WeChatService;
 import org.apache.http.Consts;
 import org.slf4j.Logger;
@@ -16,6 +18,12 @@ import org.springframework.stereotype.Service;
 import sun.misc.MessageUtils;
 
 import javax.annotation.Resource;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Formatter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.homvee.youhui.common.constants.WeChatKey.*;
@@ -25,46 +33,59 @@ import static com.homvee.youhui.common.constants.WeChatKey.*;
 public class WeChatServiceImpl implements WeChatService {
     private static Logger LOGGER = LoggerFactory.getLogger(WeChatServiceImpl.class);
 
-    private static String  APP_ID;
-    private static String  APP_SECRET;
-    private static String  ORG_GRANT_TYPE;
-    private static String  USR_GRANT_TYPE;
+    @Value("${wechat.app.id}")
+    private String appId;
 
-    private static Long EXPIRE_TIME = 7200L;
+    @Value("${wechat.app.secret}")
+    private String appSecret;
 
-    private static String MSG_TMP_URL;
-    private static String ACCESS_TOKEN_URL;
-    private static String USR_OPENID_URL;
-
+    @Value("${wechat.crypt.token}")
+    private String cryptToken;
 
     @Resource
     private WXBizMsgCrypt wxBizMsgCrypt;
 
-    private static LoadingCache<String , String> ORG_ACCESS_TOKEN_CACHE = CacheBuilder.newBuilder()
-            .refreshAfterWrite(EXPIRE_TIME, TimeUnit.SECONDS)
-            .expireAfterAccess(EXPIRE_TIME, TimeUnit.SECONDS)
-            .maximumSize(5)// 设置缓存个数
-            .build(
-                    new CacheLoader<String, String>() {
-                        /** 当本地缓存命没有中时，调用load方法获取结果并将结果缓存 **/
-                        @Override
-                        public String load(String s) throws Exception {
-                            return refreshOrgAccessToken();
-                        }
-                    }
-            );
+
+    private TokenBean tokenBean;
 
 
+    private TicketBean ticketBean;
+
+    @Override
+    public Map<String, Object> getUserInfo(String openid) {
+
+        Map<String,Object> resultMap = new HashMap<>();
+        String token = getToken();
+        String url = "https://api.weixin.qq.com/cgi-bin/user/info?access_token="+token+"&openid="+openid+"&lang=zh_CN";
+        try {
+            String body = HttpUtils.postForm(url);
+            LOGGER.info("获取用户信息{}" , body);
+            JSONObject retJson = JSONObject.parseObject(body);
+            if(retJson.containsKey(ERR_KEY)){
+                LOGGER.info("获取用户信息异常失败:{}" , retJson);
+                return resultMap;
+            }
+            resultMap.put("nickname",retJson.getString("nickname"));
+            resultMap.put("sex",retJson.getString("sex"));
+            resultMap.put("language",retJson.getString("language"));
+            resultMap.put("city",retJson.getString("city"));
+            resultMap.put("province",retJson.getString("province"));
+            resultMap.put("country",retJson.getString("country"));
+            resultMap.put("headimgurl",retJson.getString("headimgurl"));
+
+        }catch (Exception e){
+            LOGGER.error("获取用户信息异常" ,e);
+        }
+        return resultMap;
+    }
 
     @Override
     public Msg getUsrOpenId(String code , String state){
-//        String usrOpenIdUrl = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=" + APP_ID + "&secret=" + APP_SECRET + "&grant_type=" + USR_GRANT_TYPE + "&code="+code;
-        String usrOpenIdUrl = USR_OPENID_URL + code;
+        String url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid="+appId+"&secret="+appSecret+"&code="+code+"&grant_type=authorization_code";
         String body = null;
         JSONObject retJson = null;
         try{
-
-            body = HttpUtils.postForm(usrOpenIdUrl);
+            body = HttpUtils.postForm(url);
             LOGGER.info("通过用户code={}获取用户信息结果:{}" , code , body);
             retJson = JSONObject.parseObject(body);
         }catch (Exception ex){
@@ -79,42 +100,146 @@ public class WeChatServiceImpl implements WeChatService {
         return Msg.success((Object) openId);
     }
 
-    @Override
-    public void pushTemplateMsg2WeChat(Object msg) {
 
-        String token = null;
-        JSONObject retJson = null;
-        int retryNum = 3;
-        for (int i = 0; i < retryNum ; i ++ ){
-            try{
-                token = ORG_ACCESS_TOKEN_CACHE.get(ORG_ACCESS_TOKEN_KEY);
-                String body = HttpUtils.postJSON(MSG_TMP_URL + token , msg , Consts.UTF_8);
-                retJson = JSONObject.parseObject(body);
-            }catch (Exception ex){
-                LOGGER.error("发送模板消息[{}]异常"  , msg ,ex);
-            }
-            if(!retJson.containsKey(ERR_KEY)){
-                LOGGER.info("发送模板消息[{}]失败:{}" , msg , retJson);
-                continue;
-            }
-            String retCode = retJson.getString(ERR_KEY);
-            if("0".equals(retCode)){
-                LOGGER.info("发送模板消息[{}]成功" , msg);
-                return;
-            }
-            if("-1".equals(retCode)){
-                try {
-                    Thread.sleep(1000L);
-                } catch (Exception e) {
-                    LOGGER.error("" , e);
+    private String getToken(){
+        //没有或者过期 重新获取
+        if(tokenBean==null || tokenBean.isExpires()){
+            String url = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid="+appId+"&secret="+appSecret;
+            try {
+                String body = HttpUtils.postForm(url);
+                LOGGER.info("获取token信息{}" , body);
+                JSONObject retJson = JSONObject.parseObject(body);
+                if(retJson.containsKey(ERR_KEY)){
+                    LOGGER.info("获取token信息异常失败:{}" , retJson);
+                    return null;
                 }
-            }
-            //ACCESS_TOKEN超时
-            if("42001".equals(retCode)){
-                ORG_ACCESS_TOKEN_CACHE.refresh(ORG_ACCESS_TOKEN_KEY);
+                TokenBean tokenBean = new TokenBean();
+                tokenBean.setAccessToken(retJson.getString("access_token"));
+                tokenBean.setExpires(retJson.getLong("expires_in"));
+                tokenBean.setCreateTime(System.currentTimeMillis());
+                this.tokenBean = tokenBean;
+            }catch (Exception e){
+                LOGGER.error("获取token信息异常" ,e);
             }
         }
+        return tokenBean.getAccessToken();
     }
+
+    private String getTicket(){
+        //没有或者过期 重新获取
+        if(ticketBean==null || ticketBean.isExpires()){
+            String access_token = getToken();
+            String url = "https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token="+access_token+"&type=jsapi";
+            try {
+                String body = HttpUtils.postForm(url);
+                LOGGER.info("获取ticket信息{}" , body);
+                //{
+                //"errcode":0,
+                //"errmsg":"ok",
+                //"ticket":"bxLdikRXVbTPdHSM05e5u5sUoXNKd8-41ZO3MhKoyN5OfkWITDGgnr2fwJ0m9E8NYzWKVZvdVtaUgWvsdshFKA",
+                //"expires_in":7200
+                //}
+                JSONObject retJson = JSONObject.parseObject(body);
+
+                TicketBean ticketBean = new TicketBean();
+                String errmsg = retJson.getString("errmsg");
+                if(!"ok".equals(errmsg)){
+                    LOGGER.info("获取ticket信息异常失败:{}" , retJson);
+                    return null;
+                }
+                ticketBean.setErrcode(retJson.getInteger("errcode"));
+                ticketBean.setCreateTime(System.currentTimeMillis());
+                ticketBean.setErrmsg(retJson.getString("errmsg"));
+                ticketBean.setTicket(retJson.getString("ticket"));
+                ticketBean.setExpires(retJson.getLong("expires_in"));
+                this.ticketBean = ticketBean;
+            }catch (Exception e){
+                LOGGER.error("获取ticket信息异常" ,e);
+            }
+        }
+        return ticketBean.getTicket();
+    }
+
+    @Override
+    public Msg jsapi(String url) {
+
+        Map<String, String> map = sign(getTicket(), url);
+        map.put("appid",appId);
+        //map.put("accessToken",accessToken);
+        //Map<String, String> map = sign(ticket, "http://weixin.ddyunf.com");
+        LOGGER.info("获取jsapi签名api{}",map);
+        return Msg.success("获取ticket成功",map);
+    }
+
+    public static Map<String, String> sign(String jsapi_ticket, String url) {
+        Map<String, String> ret = new HashMap<String, String>();
+        String nonce_str = create_nonce_str();
+        String timestamp = create_timestamp();
+        String string1;
+        String signature = "";
+
+        //注意这里参数名必须全部小写，且必须有序
+        string1 = "jsapi_ticket=" + jsapi_ticket +
+                "&noncestr=" + nonce_str +
+                "&timestamp=" + timestamp +
+                "&url=" + url;
+        System.out.println(string1);
+
+        try{
+            MessageDigest crypt = MessageDigest.getInstance("SHA-1");
+            signature =SHA1(string1);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        ret.put("url", url);
+        ret.put("jsapi_ticket", jsapi_ticket);
+        ret.put("nonceStr", nonce_str);
+        ret.put("timestamp", timestamp);
+        ret.put("signature", signature);
+        return ret;
+    }
+
+    private static String byteToHex(final byte[] hash) {
+        Formatter formatter = new Formatter();
+        for (byte b : hash){
+            formatter.format("%02x", b);
+        }
+        String result = formatter.toString();
+        formatter.close();
+        return result;
+    }
+    public static String SHA1(String decript) {
+        try {
+            MessageDigest digest = java.security.MessageDigest.getInstance("SHA-1");
+            digest.update(decript.getBytes());
+            byte messageDigest[] = digest.digest();
+            // Create Hex String
+            StringBuffer hexString = new StringBuffer();
+            // 字节数组转换为 十六进制 数
+            for (int i = 0; i < messageDigest.length; i++) {
+                String shaHex = Integer.toHexString(messageDigest[i] & 0xFF);
+                if (shaHex.length() < 2) {
+                    hexString.append(0);
+                }
+                hexString.append(shaHex);
+            }
+            return hexString.toString();
+
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+    //生成随机字符串
+    private static String create_nonce_str() {
+        return UUID.randomUUID().toString().replaceAll("-" , "");
+    }
+    //生成时间戳字符串
+    private static String create_timestamp() {
+        return Long.toString(System.currentTimeMillis() / 1000);
+    }
+
 
 
     @Override
@@ -134,88 +259,7 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
 
-    private static String refreshOrgAccessToken() {
-        //"https://api.weixin.qq.com/cgi-bin/token?grant_type=" + ORG_GRANT_TYPE +"&appid=" + APP_ID+ "&secret=" + APP_SECRET;
-        String orgAccessTokenUrl =  ACCESS_TOKEN_URL;
-        JSONObject retJson = null;
-        String body = null;
-        try{
-            body = HttpUtils.postForm(orgAccessTokenUrl);
-            LOGGER.info("获取微信公众号token{}" , body);
-            retJson = JSONObject.parseObject(body);
-        }catch (Exception ex){
-            LOGGER.error("获取微信公众号token信息异常"  ,ex);
-            return body;
-        }
-        if(retJson.containsKey(ERR_KEY)){
 
-            LOGGER.info("获取微信公众号token失败:{}" , retJson);
-
-        }else{
-
-            body = retJson.getString(ORG_ACCESS_TOKEN_KEY);
-            Long expires = retJson.getLong(ORG_ACCESS_TOKEN_EXPIRES_KEY);
-
-            if(!EXPIRE_TIME.equals(expires)){
-                EXPIRE_TIME = expires;
-                ORG_ACCESS_TOKEN_CACHE.cleanUp();
-                ORG_ACCESS_TOKEN_CACHE = CacheBuilder.newBuilder()
-                        .refreshAfterWrite(expires, TimeUnit.SECONDS)
-                        .expireAfterAccess(expires, TimeUnit.SECONDS)
-                        .maximumSize(5)// 设置缓存个数
-                        .build(
-                                new CacheLoader<String, String>() {
-                                    /** 当本地缓存命没有中时，调用load方法获取结果并将结果缓存 **/
-                                    @Override
-                                    public String load(String s) throws Exception {
-                                        return refreshOrgAccessToken();
-                                    }
-                                }
-                        );
-            }
-        }
-        return body;
-    }
-
-    @Value("${wechat.app.id}")
-    public  void setAppId(String appId) {
-        APP_ID = appId;
-    }
-
-    @Value("${wechat.app.secret}")
-    public  void setAppSecret(String appSecret) {
-        APP_SECRET = appSecret;
-    }
-
-    @Value("${wechat.org.grant.type}")
-    public  void setOrgGrantType(String orgGrantType) {
-        ORG_GRANT_TYPE = orgGrantType;
-    }
-
-    @Value("${wechat.usr.openid.url}")
-    public  void setUsrGrantType(String usrGrantType) {
-        USR_GRANT_TYPE = usrGrantType;
-    }
-
-    @Value("${wechat.org.access.token.expire}")
-    public  void setExpireTime(Long expireTime) {
-        EXPIRE_TIME = expireTime;
-    }
-
-    @Value("${wechat.msg.tmp.url}")
-    public  void setMsgTmpUrl(String msgTmpUrl) {
-        MSG_TMP_URL = msgTmpUrl;
-    }
-
-    @Value("${wechat.org.access.token.url}")
-    public  void setAccessTokenUrl(String accessTokenUrl) {
-        ACCESS_TOKEN_URL = accessTokenUrl;
-    }
-
-    @Value("${wechat.usr.openid.url}")
-    public  void setUsrOpenidUrl(String usrOpenidUrl) {
-        USR_OPENID_URL = usrOpenidUrl;
-    }
 
 
 }

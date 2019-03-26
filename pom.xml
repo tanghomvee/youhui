@@ -68,6 +68,9 @@
         <htmlunit.version>2.33</htmlunit.version>
         <jsoup.version>1.11.3</jsoup.version>
         <cros-filter.version>1.0.0</cros-filter.version>
+
+        <aliyun-java-sdk-core.version>3.7.0</aliyun-java-sdk-core.version>
+        <aliyun-java-sdk-ecs.version>4.11.0</aliyun-java-sdk-ecs.version>
     </properties>
 
 
@@ -605,6 +608,19 @@
                 <version>${servlet.api.version}</version>
             </dependency>
             <!--Project dependency End -->
+
+
+            <!--短信服务-->
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>aliyun-java-sdk-core</artifactId>
+                <version>${aliyun-java-sdk-core.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>aliyun-java-sdk-ecs</artifactId>
+                <version>${aliyun-java-sdk-ecs.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
