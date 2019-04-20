@@ -10,13 +10,12 @@ import com.homvee.youhui.dao.user.model.User;
 import com.homvee.youhui.dao.vender.VenderDao;
 import com.homvee.youhui.dao.vender.model.Vender;
 import com.homvee.youhui.service.discount.DiscountService;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service("discountService")
 public class DiscountServiceImpl implements DiscountService {
@@ -36,6 +35,21 @@ public class DiscountServiceImpl implements DiscountService {
     public Msg findByCondition(DiscountVo discountVo) {
         Pager pager = discountDao.findByCondtion(discountVo);
         return Msg.success(pager);
+    }
+
+    @Override
+    public Msg typeList() {
+        List<Map<String,Object>> resultMap = new ArrayList<>();
+        List<Object[]> typeList = discountDao.findTypeList();
+        if(CollectionUtils.isNotEmpty(typeList)){
+            for (int i=0;i<typeList.size();i++){
+                Map<String,Object> map = new HashMap<>();
+                map.put("id",typeList.get(i)[0]);
+                map.put("name",typeList.get(i)[1]);
+                resultMap.add(map);
+            }
+        }
+        return Msg.success("获取类型列表成功",resultMap);
     }
 
     @Override

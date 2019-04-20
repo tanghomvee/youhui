@@ -13,6 +13,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -24,6 +25,8 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.PrintWriter;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/youhui/wechat")
@@ -36,6 +39,9 @@ public class WeChatCtrl extends BaseCtrl {
 
     @Autowired
     private UserService userService;
+
+    @Value("${web.app.url}")
+    private String appUrl;
 
     @RequestMapping(path = {"/index"} , method = {RequestMethod.GET})
     @ResponseBody
@@ -82,7 +88,7 @@ public class WeChatCtrl extends BaseCtrl {
      */
     @RequestMapping(path = {"/bind"} , method = {RequestMethod.POST ,RequestMethod.GET})
     @ResponseBody
-    public Msg bindCourierAcct(String openid , String phoneNo , String code,String invitCode,HttpSession session){
+    public Msg bindCourierAcct(String openid , String phoneNo , String code,HttpSession session){
 
         if(StringUtils.isEmpty(openid)){
             return Msg.error("请传绑定参数openid");
@@ -116,18 +122,13 @@ public class WeChatCtrl extends BaseCtrl {
            userNew.setMobile(phoneNo);
            userNew.setPwd("123456");
            userNew.setRewardAmt(0d);
-           if(StringUtils.isBlank(invitCode)){
-               userNew.setRecommender(null);
-           }else {
-               User invitUser = userService.findByMobile(invitCode);
-               userNew.setRecommender(invitUser.getId());
-           }
-
+           userNew.setRecommender(null);
            userNew.setOpenId(openid);
            userNew.setCreator("注册");
            userNew.setChangeTime(new Date());
            userService.saveOrUpdate(userNew);
            return Msg.success("绑定手机号成功");
+
         }
 
         //解绑之后再次绑定
@@ -139,6 +140,60 @@ public class WeChatCtrl extends BaseCtrl {
 
     }
 
+
+    /**
+     * 分享页面数据
+     * @return
+     */
+    @RequestMapping(path = {"/register"} , method = {RequestMethod.POST ,RequestMethod.GET})
+    @ResponseBody
+    public Msg register(String phoneNo , String code,String invitCode,HttpSession session){
+        if(StringUtils.isEmpty(phoneNo) ||StringUtils.isEmpty(code) ){
+            return Msg.error("请输入正确的手机号和验证码");
+        }
+        if(!VerifyUtil.isMobileNO(phoneNo)){
+            return Msg.error("请输入正确手机号");
+        }
+        if(!code.equals(session.getAttribute("code"))){
+            return Msg.error("验证码输入错误");
+        }
+        if(StringUtils.isEmpty(invitCode)){
+            return Msg.error("请输入邀请码");
+        }
+
+        User user = userService.findByMobile(phoneNo);
+        //新用户
+        if(user==null){
+            User userInvit = new User();
+            userInvit.setActivated(0);
+            userInvit.setMobile(phoneNo);
+            userInvit.setPwd("123456");
+            userInvit.setRewardAmt(0d);
+            User invitUser = userService.findByMobile(invitCode);
+            if(invitUser==null){
+                return Msg.error("邀请码错误");
+            }
+            userInvit.setRecommender(invitUser.getId());
+
+            userInvit.setOpenId(null);
+            userInvit.setCreator("邀请");
+            userInvit.setChangeTime(new Date());
+            userService.saveOrUpdate(userInvit);
+            return Msg.success("注册成功",appUrl+"/img/gzh.png");
+        }
+
+        //系统已经存在该用户 直接返回
+        return Msg.success("注册成功",appUrl+"/img/gzh.png");
+    }
+    /**
+     * 分享页面数据
+     * @return
+     */
+    @RequestMapping(path = {"/shareInfo"} , method = {RequestMethod.POST ,RequestMethod.GET})
+    @ResponseBody
+    public Msg shareInfo(){
+       return weChatService.shareInfo();
+    }
 
     /**
      * 获取openId

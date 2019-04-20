@@ -68,9 +68,15 @@
 			<mvc:exclude-mapping path="/youhui/wechat/sendPhoneVerify"/>
 			<mvc:exclude-mapping path="/youhui/wechat/openid"/>
 			<mvc:exclude-mapping path="/youhui/wechat/jsapi"/>
+			<mvc:exclude-mapping path="/youhui/wechat/shareInfo"/>
+			<mvc:exclude-mapping path="/youhui/wechat/register"/>
+
+
 
 			<mvc:exclude-mapping path="/youhui/discount/list"/>
 			<mvc:exclude-mapping path="/youhui/discount/detail"/>
+			<mvc:exclude-mapping path="/youhui/discount/typeList"/>
+
 
 			<bean class="com.homvee.youhui.web.interceptors.UsrLoginInterceptor"/>
 		</mvc:interceptor>

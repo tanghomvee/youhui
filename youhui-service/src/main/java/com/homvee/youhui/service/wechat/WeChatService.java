@@ -14,4 +14,6 @@ public interface WeChatService {
     Msg jsapi(String url);
 
     Map<String,Object> getUserInfo(String openid);
+
+    Msg shareInfo();
 }

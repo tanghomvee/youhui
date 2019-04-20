@@ -4,15 +4,19 @@ import com.alibaba.fastjson.JSONObject;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.homvee.youhui.common.enums.SysCodeEnum;
 import com.homvee.youhui.common.utils.HttpUtils;
 import com.homvee.youhui.common.utils.WXBizMsgCrypt;
-import com.homvee.youhui.common.vos.Msg;
-import com.homvee.youhui.common.vos.TicketBean;
-import com.homvee.youhui.common.vos.TokenBean;
+import com.homvee.youhui.common.vos.*;
+import com.homvee.youhui.dao.cfg.SysCfgDao;
+import com.homvee.youhui.dao.cfg.model.SysCfg;
+import com.homvee.youhui.service.discount.DiscountService;
+import com.homvee.youhui.service.discount.impl.DiscountServiceImpl;
 import com.homvee.youhui.service.wechat.WeChatService;
 import org.apache.http.Consts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import sun.misc.MessageUtils;
@@ -20,10 +24,7 @@ import sun.misc.MessageUtils;
 import javax.annotation.Resource;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Formatter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static com.homvee.youhui.common.constants.WeChatKey.*;
@@ -44,6 +45,12 @@ public class WeChatServiceImpl implements WeChatService {
 
     @Resource
     private WXBizMsgCrypt wxBizMsgCrypt;
+
+    @Autowired
+    private SysCfgDao sysCfgDao;
+
+    @Autowired
+    private DiscountService discountService;
 
 
     private TokenBean tokenBean;
@@ -259,7 +266,31 @@ public class WeChatServiceImpl implements WeChatService {
     }
 
 
+    @Override
+    public Msg shareInfo() {
+        Map<String,Object> resultMap = new HashMap<>();
+        SysCfg sysCfgHead = sysCfgDao.findByCodeAndYn(SysCodeEnum.SHARE_INFO_HEAD.getValue(), 1);
+        SysCfg sysCfgTitle = sysCfgDao.findByCodeAndYn(SysCodeEnum.SHARE_INFO_TITLE.getValue(), 1);
+        SysCfg sysCfgListInfo = sysCfgDao.findByCodeAndYn(SysCodeEnum.SHARE_INFO_LISTINFO.getValue(), 1);
+        resultMap.put("head",sysCfgHead!=null?sysCfgHead.getCodeVal():"");
+        resultMap.put("title",sysCfgTitle!=null?sysCfgTitle.getCodeVal():"");
+        resultMap.put("listInfo",sysCfgListInfo!=null?sysCfgListInfo.getCodeVal():"");
 
-
-
+        List<Map<String,Object>> listData = new ArrayList<>();
+        //随机三个列表
+        DiscountVo discountVo = new DiscountVo();
+        Msg msg = discountService.findByCondition(discountVo);
+        Pager pager = (Pager)msg.getData();
+        if(pager.getData()!=null && pager.getData().size()>0){
+            for (int i=0;i<pager.getData().size();i++){
+                Map<String,Object> temp = (Map<String,Object>)(pager.getData().get(i));
+                listData.add(temp);
+                if(i>2){
+                    break;
+                }
+            }
+        }
+        resultMap.put("listData",listData);
+        return Msg.success("获取分享数据成功",resultMap);
+    }
 }

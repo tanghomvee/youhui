@@ -40,4 +40,14 @@ public class DiscountCtr {
         Msg msg = discountService.detail(id,openid);
         return msg;
     }
+
+    /**
+     * 优惠卷类型列表
+     */
+    @RequestMapping(path = {"/typeList"} )
+    @ResponseBody
+    public Msg typeList(){
+        Msg msg = discountService.typeList();
+        return msg;
+    }
 }
