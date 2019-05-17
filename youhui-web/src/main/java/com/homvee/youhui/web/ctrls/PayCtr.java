@@ -7,6 +7,7 @@ import com.homvee.youhui.web.BaseCtrl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -29,6 +30,9 @@ public class PayCtr extends BaseCtrl {
 
     @Autowired
     private PayService payService;
+
+    @Value("${wechat.pay.sign_key}")
+    private String signKey;
 
     @RequestMapping(path = {"/payInfo"} , method = {RequestMethod.POST ,RequestMethod.GET})
     @ResponseBody
@@ -57,14 +61,20 @@ public class PayCtr extends BaseCtrl {
     @ResponseBody
     public String callBack(HttpServletRequest request, HttpServletResponse response){
         //System.out.println("微信支付成功,微信发送的callback信息,请注意修改订单信息");
-        InputStream is = null;
-        try {
-            Map<String, String> notifyMap = WXPayUtil.xmlToMap(inputStream2String(is));
-            //告诉微信服务器收到信息了，不要在调用回调action了========这里很重要回复微信服务器信息用流发送一个xml即可
 
+        try {
+            InputStream is = request.getInputStream();
+            Map<String, String> notifyMap = WXPayUtil.xmlToMap(inputStream2String(is));
+            boolean signatureValid = WXPayUtil.isSignatureValid(notifyMap,signKey);
+            if(!signatureValid){
+                LOGGER.info("签名数据{}验证失败-->",notifyMap);
+                return null;
+            }
+            //告诉微信服务器收到信息了，不要在调用回调action了========这里很重要回复微信服务器信息用流发送一个xml即可
+            LOGGER.info("支付回调返回信息-->{}",notifyMap);
             payService.callBack(notifyMap);
 
-            response.getWriter().write("<xml><return_code><![CDATA[SUCCESS]]></return_code></xml>");
+            response.getWriter().write("<xml><return_code><![CDATA[SUCCESS]]></return_code><return_msg><![CDATA[OK]]></return_msg></xml>");
             is.close();
         } catch (Exception e) {
             e.printStackTrace();

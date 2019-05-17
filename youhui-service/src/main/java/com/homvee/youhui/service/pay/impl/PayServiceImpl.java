@@ -7,8 +7,12 @@ import com.homvee.youhui.common.utils.HttpUtils;
 import com.homvee.youhui.common.vos.Msg;
 import com.homvee.youhui.dao.cfg.SysCfgDao;
 import com.homvee.youhui.dao.cfg.model.SysCfg;
+import com.homvee.youhui.dao.pay.ChargeDao;
 import com.homvee.youhui.dao.pay.PayInfoDao;
+import com.homvee.youhui.dao.pay.RewardDao;
+import com.homvee.youhui.dao.pay.model.Charge;
 import com.homvee.youhui.dao.pay.model.PayInfo;
+import com.homvee.youhui.dao.pay.model.Reward;
 import com.homvee.youhui.dao.user.UsrDao;
 import com.homvee.youhui.dao.user.model.User;
 import com.homvee.youhui.service.pay.PayService;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.net.InetAddress;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -57,6 +62,12 @@ public class PayServiceImpl implements PayService {
 
     @Autowired
     private UsrDao usrDao;
+
+    @Autowired
+    private ChargeDao chargeDao;
+
+    @Autowired
+    private RewardDao rewardDao;
 
     @Override
     public Msg findPayInfo(String openid) {
@@ -121,6 +132,15 @@ public class PayServiceImpl implements PayService {
 
             map.put("paySign",WXPayUtil.generateSignature(map,signKey, WXPayConstants.SignType.MD5));
 
+            //生成交易记录
+            PayInfo payInfo = new PayInfo();
+            payInfo.setPay(0);
+            payInfo.setCreateTime(new Date());
+            User user = usrDao.findByOpenId(openid);
+            payInfo.setMobile(user!=null?user.getMobile():null);
+            payInfo.setOpenId(openid);
+            payInfo.setPrepayId(resultMap.get("prepay_id"));
+            payInfoDao.save(payInfo);
             return Msg.success("创建下单成功",map);
 
         } catch (Exception e) {
@@ -128,14 +148,12 @@ public class PayServiceImpl implements PayService {
             return Msg.error("生成订单失败");
         }
 
-
-
-
     }
 
 
     @Override
     public void callBack(Map<String, String> notifyMap) {
+
         if(notifyMap.get("return_code").equals("SUCCESS")) {
             if (notifyMap.get("result_code").equals("SUCCESS")) {
                 String tradeNo = notifyMap.get("out_trade_no");//商户订单号
@@ -155,8 +173,16 @@ public class PayServiceImpl implements PayService {
                     }
 
 
+                    //生成充值记录表
+                    Charge charge = new Charge();
+                    charge.setAmt(Double.valueOf(amountpaid));
+                    charge.setChargeTime(new Date());
+                    charge.setUserId(user.getId());
+                    chargeDao.save(charge);
+
                     //被邀请 加邀请人奖励金额
                     if(user.getRecommender()!=null){
+
                         SysCfg sysCfg = sysCfgDao.findByCodeAndYn(SysCodeEnum.PAY_INVITE_NUM.getValue(), 1);
                         User recommender = usrDao.findById(user.getRecommender()).get();
                         if(recommender!=null && sysCfg!=null){
@@ -169,8 +195,22 @@ public class PayServiceImpl implements PayService {
                                 recommender.setRewardAmt(result.doubleValue());
                             }
                             usrDao.saveAndFlush(recommender);
+
+
+                            //
+                            Reward reward = new Reward();
+                            reward.setAmt(Double.valueOf(sysCfg.getCodeVal()));
+                            reward.setChargeId(charge.getId());
+                            reward.setPaid(0);
+                            reward.setPaidTime(null);
+                            reward.setPayer(null);
+                            reward.setUserId(recommender.getId());
+                            reward.setRewardTime(new Date());
+                            rewardDao.save(reward);
+
                         }
                     }
+
                 }
             }
         }
