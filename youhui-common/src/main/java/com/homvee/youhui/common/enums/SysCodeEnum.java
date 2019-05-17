@@ -14,6 +14,11 @@ public enum SysCodeEnum {
 
     SHARE_INFO_LISTINFO("SHARE_INFO_LISTINFO"),
 
+    PAY_INVITE_NUM("PAY_INVITE_NUM"),
+
+    FENH_LOGO("FENH_LOGO"),
+
+    FENH_TITLE("FENH_TITLE"),
     ;
 
     private String value;

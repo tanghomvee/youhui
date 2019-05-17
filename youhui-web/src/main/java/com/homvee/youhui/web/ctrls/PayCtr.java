@@ -1,5 +1,6 @@
 package com.homvee.youhui.web.ctrls;
 
+import com.homvee.youhui.common.pay.WXPayUtil;
 import com.homvee.youhui.common.vos.Msg;
 import com.homvee.youhui.service.pay.PayService;
 import com.homvee.youhui.web.BaseCtrl;
@@ -10,6 +11,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.*;
+import java.util.Map;
 
 
 /**
@@ -45,14 +51,46 @@ public class PayCtr extends BaseCtrl {
 
     /**
      * 支付通知回调接口
-     * @param openid
      * @return
      */
     @RequestMapping(path = {"/callBack"} , method = {RequestMethod.POST ,RequestMethod.GET})
     @ResponseBody
-    public Msg callBack(String openid){
-        return payService.createCharge(openid);
+    public String callBack(HttpServletRequest request, HttpServletResponse response){
+        //System.out.println("微信支付成功,微信发送的callback信息,请注意修改订单信息");
+        InputStream is = null;
+        try {
+            Map<String, String> notifyMap = WXPayUtil.xmlToMap(inputStream2String(is));
+            //告诉微信服务器收到信息了，不要在调用回调action了========这里很重要回复微信服务器信息用流发送一个xml即可
+
+            payService.callBack(notifyMap);
+
+            response.getWriter().write("<xml><return_code><![CDATA[SUCCESS]]></return_code></xml>");
+            is.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+
     }
 
+    public static String inputStream2String(InputStream in) {
+        InputStreamReader reader = null;
+        try {
+            reader = new InputStreamReader(in, "UTF-8");
+        } catch (UnsupportedEncodingException e1) {
+            e1.printStackTrace();
+        }
+        BufferedReader br = new BufferedReader(reader);
+        StringBuilder sb = new StringBuilder();
+        String line = "";
+        try {
+            while ((line = br.readLine()) != null) {
+                sb.append(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return sb.toString();
+    }
 
 }

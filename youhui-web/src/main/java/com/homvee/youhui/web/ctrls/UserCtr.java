@@ -1,10 +1,13 @@
 package com.homvee.youhui.web.ctrls;
 
 import com.alibaba.fastjson.JSONObject;
+import com.homvee.youhui.common.enums.SysCodeEnum;
 import com.homvee.youhui.common.utils.HttpUtils;
 import com.homvee.youhui.common.vos.Msg;
 import com.homvee.youhui.common.vos.TokenBean;
+import com.homvee.youhui.dao.cfg.model.SysCfg;
 import com.homvee.youhui.dao.user.model.User;
+import com.homvee.youhui.service.sycCfg.SysCfService;
 import com.homvee.youhui.service.user.UserService;
 import com.homvee.youhui.service.wechat.WeChatService;
 import com.homvee.youhui.web.BaseCtrl;
@@ -30,6 +33,9 @@ public class UserCtr extends BaseCtrl {
 
     @Autowired
     private WeChatService weChatService;
+
+    @Autowired
+    private SysCfService sysCfService;
     /**
      * 个人中心
      */
@@ -61,6 +67,14 @@ public class UserCtr extends BaseCtrl {
         //充值人数
         Integer rewardCount =  userService.findRewardAmtCount(user.getId());
         resultMap.put("rewardCount",rewardCount==null?0:rewardCount);
+
+        SysCfg sysCfgLogo = sysCfService.findByCodeAndYn(SysCodeEnum.FENH_LOGO.getValue(), 1);
+        SysCfg sysCfgTitle = sysCfService.findByCodeAndYn(SysCodeEnum.FENH_TITLE.getValue(), 1);
+        resultMap.put("logo",sysCfgLogo.getCodeVal());
+        resultMap.put("title",sysCfgTitle.getCodeVal());
+
+
+        //
         return Msg.success(resultMap);
     }
 }

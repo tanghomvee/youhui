@@ -43,6 +43,12 @@ public class WeChatCtrl extends BaseCtrl {
     @Value("${web.app.url}")
     private String appUrl;
 
+    @Value("${wechat.app.id}")
+    private String appId;
+
+    @Value("${wechat.app.secret}")
+    private String secretKey;
+
     @RequestMapping(path = {"/index"} , method = {RequestMethod.GET})
     @ResponseBody
     public String callback(String signature , String timestamp ,String nonce ,String echostr){
@@ -50,6 +56,15 @@ public class WeChatCtrl extends BaseCtrl {
         return echostr;
     }
 
+
+    @RequestMapping(path = {"/getAppId"} , method = {RequestMethod.GET})
+    @ResponseBody
+    public Msg getAppId(){
+        Map<String,Object> resultMap = new HashMap<>();
+        resultMap.put("appId",appId);
+        resultMap.put("secretKey",secretKey);
+        return Msg.success("获取成功",resultMap);
+    }
 
     /**
      * 下发验证码

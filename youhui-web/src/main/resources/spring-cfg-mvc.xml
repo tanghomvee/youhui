@@ -70,6 +70,8 @@
 			<mvc:exclude-mapping path="/youhui/wechat/jsapi"/>
 			<mvc:exclude-mapping path="/youhui/wechat/shareInfo"/>
 			<mvc:exclude-mapping path="/youhui/wechat/register"/>
+			<mvc:exclude-mapping path="/youhui/wechat/getAppId"/>
+
 
 
 
