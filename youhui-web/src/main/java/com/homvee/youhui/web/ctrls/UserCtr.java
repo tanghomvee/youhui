@@ -59,6 +59,7 @@ public class UserCtr extends BaseCtrl {
 
         //手机号
         resultMap.put("mobile",user.getMobile());
+        resultMap.put("activated",user.getActivated());
         //奖励金额
         resultMap.put("rewardAmt",user.getRewardAmt()==null?0:user.getRewardAmt());
         //邀请人数

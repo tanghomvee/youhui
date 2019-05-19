@@ -78,6 +78,7 @@ public class PayServiceImpl implements PayService {
         return Msg.success("获取充值金额成功",resultMap);
     }
 
+
     @Override
     public Msg createCharge(String openid) {
 
@@ -139,6 +140,7 @@ public class PayServiceImpl implements PayService {
             User user = usrDao.findByOpenId(openid);
             payInfo.setMobile(user!=null?user.getMobile():null);
             payInfo.setOpenId(openid);
+            payInfo.setOrderId(paramsMap.get("out_trade_no"));
             payInfo.setPrepayId(resultMap.get("prepay_id"));
             payInfoDao.save(payInfo);
             return Msg.success("创建下单成功",map);

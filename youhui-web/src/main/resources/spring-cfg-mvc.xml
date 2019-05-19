@@ -52,6 +52,8 @@
 		<!--&lt;!&ndash;登陆拦截&ndash;&gt;-->
 		<mvc:interceptor>
 			<mvc:mapping path="/**"/>
+
+			<mvc:exclude-mapping path="/MP_verify_QkNFbhM90ogMF0qn.txt" />
 			<mvc:exclude-mapping path="/user/login" /><!--账号登录 -->
 			<mvc:exclude-mapping path="/content/chat/**" />
 			<mvc:exclude-mapping path="/sms/**" />
@@ -78,6 +80,9 @@
 			<mvc:exclude-mapping path="/youhui/discount/list"/>
 			<mvc:exclude-mapping path="/youhui/discount/detail"/>
 			<mvc:exclude-mapping path="/youhui/discount/typeList"/>
+
+			<mvc:exclude-mapping path="/youhui/pay/callBack"/>
+
 
 
 			<bean class="com.homvee.youhui.web.interceptors.UsrLoginInterceptor"/>
